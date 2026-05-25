@@ -12,14 +12,16 @@ Bu repository, **Elazığ** ve **İstanbul** için uydu görüntülerinden bina 
 
 ---
 
-## 🚀 Tek Tıkla Colab
+## 🚀 Colab Notebook'ları
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ilker-23/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb)
+| Notebook | Amaç | Süre |
+|----------|------|------|
+| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ilker-23/cain-gan-urban-design/blob/main/Data_Collection_Colab.ipynb) **Data Collection** | Elazığ + İstanbul gerçek veri toplama | ~30-60 dk |
+| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ilker-23/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb) **Training** | Seismic-CAIN-GAN eğitimi | ~2-6 saat |
 
-**Adımlar:**
-1. Yukarıdaki Colab butonuna tıkla
-2. `Runtime → Change runtime type → T4/A100 GPU`
-3. `Runtime → Run all` ile çalıştır
+**Önerilen sıra:**
+1. **Data_Collection_Colab** → gerçek veriyi topla (OSM, Microsoft, AFAD, Copernicus, İBB)
+2. **CAIN_GAN_Colab** → toplanan veri üzerinde eğitim başlat
 
 ---
 
