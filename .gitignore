@@ -1,0 +1,173 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+.env
+
+# ============================================================
+# PyTorch / ML
+# ============================================================
+# Model checkpoints (often very large, use Git LFS if needed)
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.bin
+
+# Training outputs
+outputs/
+logs/
+runs/
+wandb/
+tb_logs/
+tensorboard/
+mlruns/
+lightning_logs/
+
+# Generated samples / results
+samples/
+results/
+generated/
+predictions/
+
+# ============================================================
+# Datasets (DO NOT commit large data)
+# ============================================================
+data/
+dataset/
+datasets/
+*.zip
+*.tar
+*.tar.gz
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.parquet
+*.csv
+*.tsv
+
+# Allow small example/sample data
+!data/example/
+!data/sample/
+!data/README.md
+
+# Image data
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.bmp
+*.gif
+# But allow images in docs/
+!docs/**/*.png
+!docs/**/*.jpg
+!assets/**/*.png
+!assets/**/*.jpg
+
+# ============================================================
+# Jupyter Notebook
+# ============================================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+profile_default/
+ipython_config.py
+
+# ============================================================
+# IDE / Editors
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.spyderproject
+.spyproject
+.ropeproject
+
+# ============================================================
+# OS-specific
+# ============================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================
+# Project-specific
+# ============================================================
+# Local config overrides
+config.local.yaml
+.env.local
+secrets.yaml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
+*.bak
+
+# Coverage / testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Cache
+.cache/
+*.cache

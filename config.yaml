@@ -1,0 +1,205 @@
+# Configuration for Urban Landscape GAN Training
+# YAML format - use with PyYAML library
+
+# Dataset configuration
+dataset:
+  data_root: "/path/to/dataset"  # Update this path
+  split_ratios:
+    train: 0.7
+    val: 0.15
+    test: 0.15
+
+  # Image settings
+  image_size: 256
+  paired_format: "separate"  # "separate" (A/, B/ folders) or "side_by_side"
+
+  # Data loading
+  batch_size: 16
+  num_workers: 4
+  pin_memory: true
+  shuffle_train: true
+  prefetch_factor: 2
+
+# Augmentation configuration
+augmentation:
+  enabled: true
+  level: "moderate"  # "light", "moderate", "heavy"
+
+  # Spatial transforms
+  spatial:
+    horizontal_flip: 0.5
+    vertical_flip: 0.5
+    rotation_limit: 15
+    perspective: 0.3
+
+  # Color transforms (input A only)
+  color:
+    gaussian_noise: 0.4
+    brightness_contrast: 0.5
+    gamma: 0.3
+    hue_saturation: 0.4
+
+  # Normalization
+  normalize: true
+  normalization_type: "imagenet"  # "imagenet" or "custom"
+
+  # Custom normalization (if normalization_type: "custom")
+  custom_mean: [0.5, 0.5, 0.5]
+  custom_std: [0.5, 0.5, 0.5]
+
+# Training configuration
+training:
+  num_epochs: 100
+  learning_rate: 0.0002
+  beta1: 0.5  # Adam momentum
+  beta2: 0.999
+
+  # Loss configuration
+  loss:
+    type: "GAN"  # "GAN", "LSGAN", "Hinge"
+    lambda_L1: 100  # L1 reconstruction loss weight
+    lambda_perceptual: 10  # Perceptual loss weight (optional)
+
+  # Optimizer
+  optimizer:
+    type: "Adam"  # "Adam", "SGD"
+    weight_decay: 0.0
+
+  # Learning rate scheduling
+  scheduler:
+    enabled: true
+    type: "linear_decay"  # "linear_decay", "step", "cosine"
+    decay_start_epoch: 50
+    initial_lr: 0.0002
+    final_lr: 0.0
+
+# Model architecture
+model:
+  generator:
+    type: "UNet"  # "UNet", "ResNet", "CAIN"
+    in_channels: 3
+    out_channels: 3
+    num_filters: 64
+    num_residual_blocks: 9
+
+  discriminator:
+    type: "PatchGAN"  # "PatchGAN", "Multi-scale"
+    in_channels: 6  # 3 (A) + 3 (B)
+    num_filters: 64
+    num_layers: 4
+
+# Checkpointing and logging
+checkpoint:
+  save_dir: "./checkpoints"
+  save_interval: 5  # Save every N epochs
+  keep_best: true
+  metric: "val_loss"  # "val_loss", "fid", "inception"
+
+  # Resume training
+  resume: false
+  resume_path: "./checkpoints/latest.pth"
+
+logging:
+  log_dir: "./logs"
+  tensorboard: true
+  log_interval: 100  # Log every N batches
+
+  # Sample generation
+  generate_samples: true
+  sample_interval: 1  # Generate samples every N epochs
+  num_samples: 4
+
+# Validation configuration
+validation:
+  enabled: true
+  interval: 1  # Validate every N epochs
+  num_workers: 2
+
+  # Evaluation metrics
+  metrics:
+    calculate_fid: false  # Fréchet Inception Distance
+    calculate_lpips: true  # Learned Perceptual Image Patch Similarity
+    calculate_ssim: true   # Structural Similarity Index
+    calculate_psnr: true   # Peak Signal-to-Noise Ratio
+
+# Hardware configuration
+hardware:
+  device: "cuda"  # "cuda", "cpu"
+  mixed_precision: false  # Automatic Mixed Precision
+  distributed: false  # Distributed Data Parallel
+  num_gpus: 1
+  seed: 42  # Random seed for reproducibility
+
+# Inference configuration
+inference:
+  batch_size: 4
+  output_dir: "./outputs"
+  save_intermediate: false  # Save generator outputs
+  apply_post_processing: false  # Histogram matching, etc.
+
+# CAIN-GAN specific configuration
+cain:
+  context_fusion: true
+  multi_scale: true
+  # Number of scales for multi-scale discrimination
+  num_scales: 3
+  # Context window size
+  context_window_size: 64
+  # Attention mechanism
+  use_attention: true
+
+# Advanced options
+advanced:
+  # Gradient clipping
+  gradient_clip: 1.0
+
+  # EMA (Exponential Moving Average) for generator
+  ema_enabled: false
+  ema_decay: 0.9999
+
+  # Spectral normalization
+  use_spectral_norm: true
+
+  # Instance noise (for discriminator)
+  instance_noise: 0.0
+  instance_noise_decay: 0.0
+
+# Data augmentation strategy combinations
+augmentation_presets:
+  light:
+    augmentation.level: "light"
+    augmentation.spatial.horizontal_flip: 0.5
+    augmentation.color.brightness_contrast: 0.2
+
+  moderate:
+    augmentation.level: "moderate"
+    augmentation.spatial.horizontal_flip: 0.5
+    augmentation.spatial.rotation_limit: 15
+    augmentation.color.gaussian_noise: 0.3
+    augmentation.color.brightness_contrast: 0.5
+
+  heavy:
+    augmentation.level: "heavy"
+    augmentation.spatial.horizontal_flip: 0.5
+    augmentation.spatial.rotation_limit: 20
+    augmentation.spatial.perspective: 0.4
+    augmentation.color.gaussian_noise: 0.5
+    augmentation.color.brightness_contrast: 0.6
+
+# Environment
+environment:
+  project_name: "UrbanLandscapeGAN"
+  experiment_name: "cain-gan-256x256"
+  description: "GAN-based urban landscape generation from satellite imagery"
+
+  # Paths
+  base_dir: "./"
+  data_dir: "./data"
+  output_dir: "./outputs"
+
+  # Monitoring
+  wandb_enabled: false  # Weights & Biases
+  wandb_project: "urban-landscape-gan"
+
+  # Version control
+  git_track: true
