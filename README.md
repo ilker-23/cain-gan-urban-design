@@ -20,7 +20,8 @@ Bu repository, **Elazığ** ve **İstanbul** için uydu görüntülerinden bina 
 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ilker-23/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb) **Training** | Seismic-CAIN-GAN eğitimi | ~2-6 saat |
 
 **Önerilen sıra:**
-1. **Data_Collection_Colab** → gerçek veriyi topla (OSM, Microsoft, AFAD, Copernicus, İBB)
+1. **Data_Collection_Colab** → gerçek veriyi topla
+   ⚡ **Geofabrik bulk** (Overpass değil!) → İstanbul'da 1.5M+ bina için tek geçer yol
 2. **CAIN_GAN_Colab** → toplanan veri üzerinde eğitim başlat
 
 ---

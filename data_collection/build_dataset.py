@@ -36,10 +36,17 @@ from .config import (
 )
 
 
-ALL_STEPS = ["osm", "microsoft", "ibb", "seismic", "dem", "patches"]
+ALL_STEPS = ["geofabrik", "osm", "microsoft", "ibb", "seismic", "dem", "patches"]
+
+
+def run_step_geofabrik(cities: List[str], raw_root: Path):
+    """Geofabrik bulk indir (önerilen, Overpass yerine)."""
+    from .geofabrik_downloader import pipeline as geofabrik_pipeline
+    return geofabrik_pipeline(cities, output_root=raw_root)
 
 
 def run_step_osm(city: str, raw_root: Path, districts: List[str] = None):
+    """Overpass fallback (Geofabrik başarısızsa)."""
     from .osm_downloader import download_city
     return download_city(city, raw_root, districts=districts)
 
@@ -106,7 +113,11 @@ def run_pipeline(
         print(f"\n\n>>> ADIM: {step.upper()}")
 
         try:
-            if step == "osm":
+            if step == "geofabrik":
+                # Geofabrik tek seferde tüm şehirler için işliyor
+                # (Türkiye extract'i ortak)
+                continue  # main() level'da işlenecek
+            elif step == "osm":
                 run_step_osm(city, raw_root, districts)
             elif step == "microsoft":
                 run_step_microsoft(city, raw_root)
@@ -149,7 +160,8 @@ def main():
     if args.steps:
         steps = args.steps.split(",")
     else:
-        steps = list(ALL_STEPS)
+        # Varsayılan: geofabrik öncelikli, osm fallback yok
+        steps = ["geofabrik", "microsoft", "ibb", "seismic", "dem", "patches"]
 
     if args.skip:
         skip = set(args.skip.split(","))
@@ -159,6 +171,18 @@ def main():
 
     raw_root = Path(args.raw_root)
     output_root = Path(args.output)
+
+    # 1) Geofabrik bulk indirme (ortak, tüm şehirler için tek seferde)
+    if "geofabrik" in steps:
+        print("\n" + "█" * 70)
+        print("  ADIM 0: GEOFABRIK BULK İNDİRME")
+        print("█" * 70)
+        try:
+            run_step_geofabrik(cities, raw_root)
+        except Exception as e:
+            print(f"❌ Geofabrik başarısız: {e}")
+            print("   Overpass fallback'e geçiliyor...")
+            steps = ["osm" if s == "geofabrik" else s for s in steps]
 
     total_timings = {}
     for city in cities:

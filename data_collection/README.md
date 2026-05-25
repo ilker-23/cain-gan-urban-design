@@ -6,54 +6,82 @@ Elazığ + İstanbul için CAIN-GAN eğitim verisinin **end-to-end otomatik üre
 
 ## 🚀 Hızlı Başlangıç
 
-### Tek komutla tam pipeline:
+### Tek komutla tam pipeline (ÖNERİLEN — Geofabrik tabanlı):
 
 ```bash
-# Ek bağımlılıklar
+# Ek bağımlılıklar (geopandas KRİTİK)
 pip install -r data_collection/requirements.txt
 
-# Tam pipeline (yaklaşık 1-2 saat)
+# Tam pipeline (~30-45 dakika)
 python -m data_collection.build_dataset --city both
 ```
 
 Bu komut şunları yapar:
-1. ✅ OSM'den bina/yol/su/vejetasyon indirir
-2. ✅ Microsoft Building Footprints (Türkiye)
-3. ✅ İBB Açık Veri (sadece İstanbul)
-4. ✅ AFAD sismik veri (proxy / resmi)
-5. ✅ Copernicus DEM (30m)
+1. ✅ **Geofabrik Türkiye OSM** bulk indirme (~600 MB, tek seferlik)
+2. ✅ Şehir BBox ile filtreleme (binalar, yollar, su, vejetasyon, landuse)
+3. ✅ AFAD sismik veri (proxy / resmi)
+4. ✅ Copernicus DEM (30m, AWS Open Data)
+5. ✅ İBB Açık Veri (sadece İstanbul, opsiyonel)
 6. ✅ 256×256 patch'lere böler
 7. ✅ `data/{elazig,istanbul}/{train,val,test}` dizinine kaydeder
 
 ---
 
+## ⚡ Neden Geofabrik?
+
+| Kriter | Overpass API | **Geofabrik** ✅ |
+|--------|-------------|------------------|
+| Rate-limit | Sıkı (406/429) | Yok |
+| İstanbul (1.5M+ bina) | ❌ 406 hatası | ✅ Sorunsuz |
+| Hız | Saatler | ~10 dakika |
+| Güncellik | Anlık | Günlük |
+| Bağımlılık | requests | geopandas |
+| Güvenilirlik | Düşük | %100 |
+
+Overpass API yoğun saatlerde "Not Acceptable" (HTTP 406) atıyor. Geofabrik aynı OSM verisini tek bir ZIP'te sunuyor.
+
+---
+
 ## 📦 Modüller
 
-| Modül | İşlev |
-|-------|-------|
-| `osm_downloader.py` | Overpass API ile OSM verisi |
-| `microsoft_buildings.py` | Microsoft Global Building Footprints |
-| `ibb_downloader.py` | İBB Açık Veri Portalı (İstanbul) |
-| `afad_seismic.py` | AFAD sismik (PGA) — proxy fallback'li |
-| `copernicus_dem.py` | Copernicus DEM 30m (AWS Open Data) |
-| `rasterize.py` | Vector → Raster (256×256) |
-| `patch_extractor.py` | Sliding window ile patch üretimi |
-| `build_dataset.py` | End-to-end orchestration |
-| `config.py` | Şehir BBox, ilçe listesi, encoding |
+| Modül | İşlev | Durum |
+|-------|-------|-------|
+| `geofabrik_downloader.py` | **Geofabrik Türkiye OSM bulk** ⭐ | Birincil |
+| `osm_downloader.py` | Overpass API (fallback) | Yedek |
+| `microsoft_buildings.py` | Microsoft Global Building Footprints | Opsiyonel |
+| `ibb_downloader.py` | İBB Açık Veri Portalı (İstanbul) | Opsiyonel |
+| `afad_seismic.py` | AFAD sismik (PGA) — proxy fallback'li | Önerilen |
+| `copernicus_dem.py` | Copernicus DEM 30m (AWS Open Data) | Önerilen |
+| `rasterize.py` | Vector → Raster (256×256) | Core |
+| `patch_extractor.py` | Sliding window ile patch üretimi | Core |
+| `build_dataset.py` | End-to-end orchestration | Core |
+| `config.py` | Şehir BBox, ilçe listesi, encoding | Core |
 
 ---
 
 ## 🎯 Tek Tek Çalıştırma
 
-### 1. OSM indirme
+### 1. Geofabrik (ÖNERİLEN)
 
 ```bash
-# Tüm şehir (BBox tabanlı, hızlı)
-python -m data_collection.osm_downloader --city elazig
-python -m data_collection.osm_downloader --city istanbul
+# Türkiye extract'ini indir + Elazığ + İstanbul çıkar
+python -m data_collection.geofabrik_downloader --extract both
 
-# İlçe-bazlı (yavaş ama hassas)
-python -m data_collection.osm_downloader --city istanbul --all_districts
+# Sadece bir şehir
+python -m data_collection.geofabrik_downloader --extract elazig
+
+# Sadece indir (şehir çıkarmadan)
+python -m data_collection.geofabrik_downloader --download_only
+```
+
+İndirilen ZIP varsayılan olarak `data_collection/raw/_geofabrik/turkey-latest-free.shp.zip` konumunda saklanır. Aynı komut tekrar çalıştırıldığında indirme atlanır.
+
+### 2. OSM/Overpass (Yedek)
+
+⚠️ **Overpass yoğun saatlerde 406 hatası verir.** Geofabrik başarısız olursa kullanın.
+
+```bash
+python -m data_collection.osm_downloader --city elazig
 ```
 
 ### 2. Microsoft Building Footprints

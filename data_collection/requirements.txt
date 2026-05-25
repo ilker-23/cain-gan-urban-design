@@ -3,10 +3,13 @@
 
 requests>=2.31.0
 
-# Coğrafi veri işleme (opsiyonel ama önerilen — DEM/sismik için)
-rasterio>=1.3.0
+# Geofabrik shapefile okuma — KRİTİK (önerilen yol)
 geopandas>=0.13.0
 shapely>=2.0.0
+fiona>=1.9.0
 
-# Hızlandırma (opsiyonel)
+# Coğrafi veri işleme (DEM/sismik için)
+rasterio>=1.3.0
+
+# Hızlandırma
 tqdm>=4.65.0
