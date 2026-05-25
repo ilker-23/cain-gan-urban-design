@@ -159,6 +159,7 @@ def build_planning_guidance(
     landuse_features: List[Dict],
     bbox: Tuple[float, float, float, float],
     image_size: Tuple[int, int] = (256, 256),
+    building_features: Optional[List[Dict]] = None,
 ) -> np.ndarray:
     """Planning guidance RGB kanalı.
 
@@ -166,11 +167,14 @@ def build_planning_guidance(
       R = residential (konut)
       G = commercial (ticaret)
       B = industrial (sanayi)
+
+    Landuse poligonu yoksa veya yetersizse, **building tag'lerinden** kategori
+    sentezler (Geofabrik'te Türk şehirleri için landuse poligonu az).
     """
     W, H = image_size
     rgb = np.zeros((H, W, 3), dtype=np.uint8)
 
-    # Kategori-bazlı filtreleme
+    # ===== 1) OSM landuse poligonları =====
     categories = {
         "residential": [],
         "commercial": [],
@@ -178,15 +182,63 @@ def build_planning_guidance(
     }
 
     for feat in landuse_features:
-        landuse = feat.get("properties", {}).get("landuse", "").lower()
-        if landuse == "residential":
+        props = feat.get("properties", {})
+        # Geofabrik'te 'fclass' alanı kullanılır, OSM ham'da 'landuse'
+        lu = (props.get("landuse") or props.get("fclass") or "").lower()
+        if lu == "residential":
             categories["residential"].append(feat)
-        elif landuse in ["commercial", "retail"]:
+        elif lu in ["commercial", "retail"]:
             categories["commercial"].append(feat)
-        elif landuse == "industrial":
+        elif lu == "industrial":
             categories["industrial"].append(feat)
 
-    # Her kategori için ayrı kanal
+    # ===== 2) Building-based inference (fallback) =====
+    # Eğer landuse yoksa, building tag'lerinden synthesize et
+    n_landuse = sum(len(v) for v in categories.values())
+
+    if n_landuse == 0 and building_features:
+        # Bina yoğunluğundan residential bölgesi çıkar
+        # (Türk şehirlerinde çoğu bina konut)
+        # Bu kanalda binaları "dilate" ederek residential bölgesi çıkar
+        try:
+            from PIL import Image as PILImage
+            from PIL import ImageFilter
+        except ImportError:
+            return rgb
+
+        building_mask = rasterize_polygons(
+            building_features, bbox, image_size, fill_value=255
+        )
+
+        # Dilate: binaları genişleterek konut bölgesi yaklaşık çıkar
+        img = PILImage.fromarray(building_mask)
+        img = img.filter(ImageFilter.MaxFilter(size=11))  # dilate ~5px
+        img = img.filter(ImageFilter.GaussianBlur(radius=4))  # yumuşat
+        residential_synthesized = np.array(img)
+
+        # Bina tag'lerine göre özel kategoriler
+        commercial_feats = []
+        industrial_feats = []
+        for feat in building_features:
+            props = feat.get("properties", {})
+            btype = (props.get("type") or props.get("building") or "").lower()
+            if btype in ["retail", "commercial", "office", "shop", "mall",
+                           "supermarket", "warehouse"]:
+                commercial_feats.append(feat)
+            elif btype in ["industrial", "factory", "manufacture"]:
+                industrial_feats.append(feat)
+
+        rgb[:, :, 0] = residential_synthesized  # R = residential
+        if commercial_feats:
+            mask = rasterize_polygons(commercial_feats, bbox, image_size, 255)
+            rgb[:, :, 1] = np.maximum(rgb[:, :, 1], mask)
+        if industrial_feats:
+            mask = rasterize_polygons(industrial_feats, bbox, image_size, 255)
+            rgb[:, :, 2] = np.maximum(rgb[:, :, 2], mask)
+
+        return rgb
+
+    # ===== 3) Landuse varsa direkt rasterize =====
     if categories["residential"]:
         mask = rasterize_polygons(categories["residential"], bbox, image_size, 255)
         rgb[:, :, 0] = mask

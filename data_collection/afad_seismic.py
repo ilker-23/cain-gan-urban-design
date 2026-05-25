@@ -94,7 +94,8 @@ def estimate_pga_from_distance(lat: float, lon: float, city: str) -> float:
 
 
 def generate_pga_geotiff_proxy(city: str, output_path: Path,
-                                 resolution: int = 1000) -> Path:
+                                 resolution: int = 1000,
+                                 smooth_sigma: float = 8.0) -> Path:
     """
     AFAD verisi alınamadığında proxy PGA raster üret.
     Bu **yedek** çözümdür; resmi araştırma için AFAD'dan resmi veri alınmalıdır.
@@ -103,10 +104,11 @@ def generate_pga_geotiff_proxy(city: str, output_path: Path,
         city: 'elazig' veya 'istanbul'
         output_path: çıktı GeoTIFF yolu
         resolution: raster boyutu (resolution x resolution)
+        smooth_sigma: Gaussian blur sigma (daha doğal görünüm için)
     """
     try:
         import numpy as np
-        from PIL import Image
+        from PIL import Image, ImageFilter
     except ImportError:
         print("⚠️ numpy + Pillow gerekli")
         return output_path
@@ -116,20 +118,31 @@ def generate_pga_geotiff_proxy(city: str, output_path: Path,
 
     # Grid oluştur
     lons = np.linspace(minlon, maxlon, resolution)
-    lats = np.linspace(maxlat, minlat, resolution)  # üstten alta
+    lats = np.linspace(maxlat, minlat, resolution)
 
     pga_grid = np.zeros((resolution, resolution), dtype=np.float32)
 
     print(f"  → PGA grid hesaplanıyor ({resolution}×{resolution})...")
+    # Vektörize: meshgrid ile daha hızlı + smooth
+    lon_mesh, lat_mesh = np.meshgrid(lons, lats)
+    flat_lats = lat_mesh.flatten()
+    flat_lons = lon_mesh.flatten()
+
+    # Çok kalabalık olduğu için batch hesaplama yerine inner-loop;
+    # ama gaussian blur ile son halini yumuşatıyoruz.
     for i, lat in enumerate(lats):
         for j, lon in enumerate(lons):
             pga_grid[i, j] = estimate_pga_from_distance(lat, lon, city)
 
-    # Normalize ve uint8'e dönüştür
+    # Normalize → uint8
     pga_uint8 = (pga_grid * 255 / 0.8).clip(0, 255).astype("uint8")
 
-    # PNG olarak kaydet (GeoTIFF için rasterio gerek; PNG yeterli proxy)
+    # GAUSSIAN BLUR ile yumuşat (merdiven görünümünü gider)
     img = Image.fromarray(pga_uint8)
+    if smooth_sigma > 0:
+        img = img.filter(ImageFilter.GaussianBlur(radius=smooth_sigma))
+        print(f"  → Gaussian blur uygulandı (sigma={smooth_sigma})")
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path)
 

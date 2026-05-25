@@ -84,13 +84,38 @@ def count_buildings_in_bbox(
     for feat in building_features:
         geom = feat.get("geometry", {})
         coords = geom.get("coordinates", [])
-        if geom.get("type") == "Polygon" and coords:
-            ring = coords[0]
+        if geom.get("type") in ("Polygon", "MultiPolygon") and coords:
+            # Polygon: coords[0] = exterior ring
+            # MultiPolygon: coords[0][0] = first polygon's exterior
+            ring = coords[0] if geom["type"] == "Polygon" else coords[0][0]
             cx = sum(c[0] for c in ring) / len(ring)
             cy = sum(c[1] for c in ring) / len(ring)
             if minlon <= cx <= maxlon and minlat <= cy <= maxlat:
                 count += 1
     return count
+
+
+def count_buildings_in_inner(
+    building_features: List[Dict],
+    patch_bbox: Tuple[float, float, float, float],
+    inner_ratio: float = 0.4,
+) -> int:
+    """Sadece tasarım alanı (mask=0 bölgesi) içindeki bina sayısı.
+
+    Bu kritik — model boş tasarım alanını öğrenemez.
+    """
+    minlon, minlat, maxlon, maxlat = patch_bbox
+    dlon = maxlon - minlon
+    dlat = maxlat - minlat
+    inset_lon = dlon * (1 - inner_ratio) / 2
+    inset_lat = dlat * (1 - inner_ratio) / 2
+    inner_bbox = (
+        minlon + inset_lon,
+        minlat + inset_lat,
+        maxlon - inset_lon,
+        maxlat - inset_lat,
+    )
+    return count_buildings_in_bbox(building_features, inner_bbox)
 
 
 def create_design_mask(
@@ -260,20 +285,45 @@ def process_city(
     )
     print(f"   Toplam aday patch: {len(patch_bboxes)}")
 
-    # 4. Bina sayısı filtresi (placeholder — gerçekte spatial index daha hızlı)
+    # 4. Bina sayısı filtresi
+    #
+    # SIKI FİLTRELER:
+    # - Patch'te toplam ≥ min_buildings (yoğun urban alan)
+    # - Tasarım alanında (mask=0) ≥ min_inside_buildings (model öğrenebilsin)
     min_buildings = PATCH_CONFIG["min_buildings_per_patch"]
+    min_inside = PATCH_CONFIG.get("min_inside_buildings", 2)
+
     valid_patches = []
+    n_rejected_total = 0
+    n_rejected_inside = 0
+
     for i, pbbox in enumerate(patch_bboxes):
         if i % 100 == 0:
             print(f"   Tarama: {i}/{len(patch_bboxes)}")
-        n = count_buildings_in_bbox(buildings, pbbox)
-        if n >= min_buildings:
-            valid_patches.append((i, pbbox, n))
+        n_total = count_buildings_in_bbox(buildings, pbbox)
+        if n_total < min_buildings:
+            n_rejected_total += 1
+            continue
+        n_inside = count_buildings_in_inner(buildings, pbbox, inner_ratio=0.4)
+        if n_inside < min_inside:
+            n_rejected_inside += 1
+            continue
+        valid_patches.append((i, pbbox, n_total))
 
-    print(f"   ✅ Geçerli patch sayısı: {len(valid_patches)}")
+    print(f"\n   📊 Filtreleme sonucu:")
+    print(f"      Toplam aday:     {len(patch_bboxes)}")
+    print(f"      Az bina (red):    {n_rejected_total}")
+    print(f"      Boş merkez (red): {n_rejected_inside}")
+    print(f"      ✅ Geçerli:       {len(valid_patches)}")
 
     if not valid_patches:
-        print("   ❌ Geçerli patch yok! min_buildings_per_patch çok yüksek olabilir.")
+        print("\n   ❌ HİÇ GEÇERLİ PATCH YOK!")
+        print("   Olası sebepler:")
+        print("     1. BBox çok geniş (kırsal alan)")
+        print("     2. min_buildings_per_patch çok yüksek")
+        print("     3. OSM'de bu bölgenin verisi eksik")
+        print("\n   Çözüm: config.py'da CITY_BBOXES[city]['bbox']'i daha dar yapın")
+        print("          veya PATCH_CONFIG['min_buildings_per_patch']'i düşürün")
         return {}
 
     # 5. Split
@@ -323,7 +373,11 @@ def process_city(
             # Kanalları üret
             site = build_site_context(local_roads, local_water, local_veg,
                                        pbbox, (image_size, image_size))
-            planning = build_planning_guidance(local_landuse, pbbox, (image_size, image_size))
+            # ⚡ Geofabrik landuse zayıfsa building-based inference devreye girer
+            planning = build_planning_guidance(
+                local_landuse, pbbox, (image_size, image_size),
+                building_features=local_buildings,
+            )
             all_buildings = build_buildings_mask(local_buildings, pbbox, (image_size, image_size))
             mask = create_design_mask(pbbox, image_size)
 
