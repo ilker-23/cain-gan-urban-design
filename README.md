@@ -1,6 +1,6 @@
 # 🏙️ CAIN-GAN: Automated Urban Site Planning
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ilker-23/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -15,9 +15,7 @@ Bu repo, **uydu görüntülerinden kentsel peyzaj/site tasarımları** üretmek 
 
 **En kolay yol:** Colab'da tek tıkla çalıştırın 👇
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb)
-
-> ⚠️ `YOUR_USERNAME` yerine kendi GitHub kullanıcı adınızı yazın.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ilker-23/cain-gan-urban-design/blob/main/CAIN_GAN_Colab.ipynb)
 
 **Adımlar:**
 1. Yukarıdaki Colab butonuna tıklayın
@@ -90,7 +88,7 @@ Stage 2: Height Completion (Bina yükseklikleri)
 ### 1. Repository'i klonlayın
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/cain-gan-urban-design.git
+git clone https://github.com/ilker-23/cain-gan-urban-design.git
 cd cain-gan-urban-design
 ```
 
