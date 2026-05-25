@@ -201,23 +201,31 @@ class TurkishCityDataset(Dataset):
             self.city_dir / target_dir / f"{sample_id}.png", mode="L"
         )
 
-        # Augmentation (paired spatial consistency)
-        transform = self._build_transform(conditional.shape[2])
+        # Augmentation (spatial-only; normalize edilmiyor — manuel yapılacak)
+        transform = self._build_transform()
         augmented = transform(image=conditional, image_target=target)
+
+        cond_tensor = augmented["image"].float()         # (C, 256, 256), [0, 255]
+        target_tensor = augmented["image_target"].float() # (1, 256, 256), [0, 255]
+
+        # Manuel normalizasyon (multi-channel uyumlu).
+        # [0, 1] kullanılıyor (Sigmoid generator output ile uyumlu).
+        cond_tensor = cond_tensor / 255.0
+        target_tensor = target_tensor / 255.0
 
         target_key = "footprint" if self.stage == "footprint" else "height"
 
         return {
-            "conditional_inputs": augmented["image"],   # (C, 256, 256)
-            target_key: augmented["image_target"],       # (1, 256, 256)
+            "conditional_inputs": cond_tensor,            # (C, 256, 256)
+            target_key: target_tensor,                     # (1, 256, 256)
             "sample_id": sample_id,
             "city": self.city,
             "city_index": CITY_INDEX[self.city],
             "stage": self.stage,
         }
 
-    def _build_transform(self, num_channels: int) -> A.Compose:
-        """Augmentation pipeline (spatial-only, semantik veri için renk yok)."""
+    def _build_transform(self) -> A.Compose:
+        """Spatial-only augmentation. Normalize manuel yapılır."""
         transforms = []
 
         if self.augment and self.split == "train":
@@ -226,15 +234,6 @@ class TurkishCityDataset(Dataset):
                 A.VerticalFlip(p=0.3),
                 A.Rotate(limit=10, p=0.3, border_mode=1),
             ])
-
-        if self.normalize:
-            transforms.append(
-                A.Normalize(
-                    mean=[0.5] * num_channels,
-                    std=[0.5] * num_channels,
-                    max_pixel_value=255.0,
-                )
-            )
 
         transforms.append(ToTensorV2())
 

@@ -192,14 +192,14 @@ class MultiCityCAINTrainer:
                     if dem_channel_idx is not None else None
                 )
 
-                B = conditional.shape[0]
-                real_lbl = torch.ones(B, 1, 1, 1, device=self.device)
-                fake_lbl = torch.zeros(B, 1, 1, 1, device=self.device)
-
                 # ========== Generator ==========
                 opt_g.zero_grad()
                 pred = generator(conditional, seismic_map=seismic_map, city_index=city_idx)
                 d_pred = discriminator(pred)
+
+                # PatchGAN: discriminator çıktısı (B, 1, H', W') şekilli
+                real_lbl = torch.ones_like(d_pred)
+                fake_lbl = torch.zeros_like(d_pred)
 
                 loss_g, comps = composite_cain_loss(
                     predicted=pred,
@@ -221,8 +221,10 @@ class MultiCityCAINTrainer:
                 opt_d.zero_grad()
                 d_real = discriminator(target)
                 d_fake = discriminator(pred.detach())
-                loss_d = (nn.functional.binary_cross_entropy(d_real, real_lbl) +
-                          nn.functional.binary_cross_entropy(d_fake, fake_lbl)) / 2
+                real_lbl_d = torch.ones_like(d_real)
+                fake_lbl_d = torch.zeros_like(d_fake)
+                loss_d = (nn.functional.binary_cross_entropy(d_real, real_lbl_d) +
+                          nn.functional.binary_cross_entropy(d_fake, fake_lbl_d)) / 2
                 loss_d.backward()
                 opt_d.step()
 
